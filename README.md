@@ -1,5 +1,7 @@
 # Admission intake automation
 
+![A real run of the 35 end-to-end checks against the Logic Apps runtime](docs/demo.gif)
+
 One intake call, written once to two systems, safely. A care coordinator used to re-key every new admission into two places and chase the confirmation; this is a Logic Apps workflow that does it in seconds, refuses anything that could carry a resident's identity, and tells the caller the truth when a downstream system will not take it.
 
 It is the "copying the same information into two systems" problem from a healthcare-IT job post, built and run on the **real Azure Logic Apps Standard runtime**, locally, against two mock systems. It has not been deployed to Azure and it is not production.
