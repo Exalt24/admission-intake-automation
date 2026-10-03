@@ -1,0 +1,9 @@
+.azurite/
+logs/
+logicapp/obj/
+logicapp/bin/
+logicapp/__blobstorage__/
+logicapp/__queuestorage__/
+logicapp/__azurite*
+logicapp/local.settings.json.bak
+__pycache__/

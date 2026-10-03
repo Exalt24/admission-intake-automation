@@ -1,0 +1,226 @@
+{
+  "definition": {
+    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+    "contentVersion": "1.0.0.0",
+    "triggers": {
+      "When_an_admission_is_received": {
+        "type": "Request",
+        "kind": "Http",
+        "inputs": {
+          "method": "POST",
+          "schema": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "actions": {
+      "Check_caller": {
+        "type": "If",
+        "runAfter": {},
+        "expression": {
+          "and": [
+            {
+              "equals": [
+                "@triggerOutputs()?['headers']?['x-intake-key']",
+                "@appsetting('INTAKE_SHARED_KEY')"
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "Check_for_direct_identifiers": {
+            "type": "If",
+            "runAfter": {},
+            "expression": {
+              "or": [
+                { "not": { "equals": [ "@coalesce(triggerBody()?['residentName'], '')", "" ] } },
+                { "not": { "equals": [ "@coalesce(triggerBody()?['patientName'], '')", "" ] } },
+                { "not": { "equals": [ "@coalesce(triggerBody()?['name'], '')", "" ] } },
+                { "not": { "equals": [ "@coalesce(triggerBody()?['ssn'], '')", "" ] } },
+                { "not": { "equals": [ "@coalesce(triggerBody()?['dob'], '')", "" ] } },
+                { "not": { "equals": [ "@coalesce(triggerBody()?['dateOfBirth'], '')", "" ] } },
+                { "not": { "equals": [ "@coalesce(triggerBody()?['phone'], '')", "" ] } },
+                { "not": { "equals": [ "@coalesce(triggerBody()?['address'], '')", "" ] } }
+              ]
+            },
+            "actions": {
+              "Respond_422_identifiers_not_accepted": {
+                "type": "Response",
+                "kind": "Http",
+                "runAfter": {},
+                "inputs": {
+                  "statusCode": 422,
+                  "headers": { "Content-Type": "application/json" },
+                  "body": {
+                    "error": "direct_identifiers_not_accepted",
+                    "message": "Send residentRef, the facility's own opaque reference. Names, birth dates, phone numbers, addresses and social security numbers are refused at the door and never stored."
+                  }
+                }
+              }
+            },
+            "else": {
+              "actions": {
+                "Validate_payload": {
+                  "type": "If",
+                  "runAfter": {},
+                  "expression": {
+                    "and": [
+                      { "not": { "equals": [ "@coalesce(triggerBody()?['admissionId'], '')", "" ] } },
+                      { "not": { "equals": [ "@coalesce(triggerBody()?['facilityId'], '')", "" ] } },
+                      { "not": { "equals": [ "@coalesce(triggerBody()?['residentRef'], '')", "" ] } },
+                      { "not": { "equals": [ "@coalesce(triggerBody()?['admitDate'], '')", "" ] } },
+                      { "not": { "equals": [ "@coalesce(triggerBody()?['careLevel'], '')", "" ] } }
+                    ]
+                  },
+                  "actions": {
+                    "Build_record": {
+                      "type": "Compose",
+                      "runAfter": {},
+                      "inputs": {
+                        "trackingId": "@guid()",
+                        "admissionId": "@triggerBody()?['admissionId']",
+                        "facilityId": "@triggerBody()?['facilityId']",
+                        "residentRef": "@triggerBody()?['residentRef']",
+                        "admitDate": "@triggerBody()?['admitDate']",
+                        "careLevel": "@triggerBody()?['careLevel']",
+                        "receivedAt": "@utcNow()"
+                      }
+                    },
+                    "Fan_out_to_both_systems": {
+                      "type": "Scope",
+                      "runAfter": {
+                        "Build_record": [ "Succeeded" ]
+                      },
+                      "actions": {
+                        "Write_to_system_A": {
+                          "type": "Http",
+                          "runAfter": {},
+                          "inputs": {
+                            "method": "POST",
+                            "uri": "@{appsetting('SYSTEM_A_URL')}/admissions",
+                            "headers": {
+                              "Content-Type": "application/json",
+                              "Idempotency-Key": "@{triggerBody()?['admissionId']}"
+                            },
+                            "body": "@outputs('Build_record')",
+                            "retryPolicy": {
+                              "type": "fixed",
+                              "count": 3,
+                              "interval": "PT5S"
+                            }
+                          }
+                        },
+                        "Write_to_system_B": {
+                          "type": "Http",
+                          "runAfter": {},
+                          "inputs": {
+                            "method": "POST",
+                            "uri": "@{appsetting('SYSTEM_B_URL')}/admissions",
+                            "headers": {
+                              "Content-Type": "application/json",
+                              "Idempotency-Key": "@{triggerBody()?['admissionId']}"
+                            },
+                            "body": "@outputs('Build_record')",
+                            "retryPolicy": {
+                              "type": "fixed",
+                              "count": 3,
+                              "interval": "PT5S"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Respond_202_accepted": {
+                      "type": "Response",
+                      "kind": "Http",
+                      "runAfter": {
+                        "Fan_out_to_both_systems": [ "Succeeded" ]
+                      },
+                      "inputs": {
+                        "statusCode": 202,
+                        "headers": { "Content-Type": "application/json" },
+                        "body": {
+                          "status": "accepted",
+                          "trackingId": "@{outputs('Build_record')?['trackingId']}",
+                          "writtenTo": [ "system-a", "system-b" ]
+                        }
+                      }
+                    },
+                    "Send_to_dead_letter": {
+                      "type": "Http",
+                      "runAfter": {
+                        "Fan_out_to_both_systems": [ "Failed", "TimedOut" ]
+                      },
+                      "inputs": {
+                        "method": "POST",
+                        "uri": "@{appsetting('DEAD_LETTER_URL')}/dead-letter",
+                        "headers": { "Content-Type": "application/json" },
+                        "body": {
+                          "record": "@outputs('Build_record')",
+                          "failure": "@result('Fan_out_to_both_systems')"
+                        }
+                      }
+                    },
+                    "Respond_502_downstream_failed": {
+                      "type": "Response",
+                      "kind": "Http",
+                      "runAfter": {
+                        "Send_to_dead_letter": [ "Succeeded", "Failed" ]
+                      },
+                      "inputs": {
+                        "statusCode": 502,
+                        "headers": { "Content-Type": "application/json" },
+                        "body": {
+                          "status": "held",
+                          "trackingId": "@{outputs('Build_record')?['trackingId']}",
+                          "message": "The admission was received but a downstream system did not accept it after retries. It is parked in the dead-letter queue for a person to replay."
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Respond_400_missing_fields": {
+                        "type": "Response",
+                        "kind": "Http",
+                        "runAfter": {},
+                        "inputs": {
+                          "statusCode": 400,
+                          "headers": { "Content-Type": "application/json" },
+                          "body": {
+                            "error": "invalid_admission",
+                            "message": "admissionId, facilityId, residentRef, admitDate and careLevel are all required."
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "else": {
+          "actions": {
+            "Respond_401_unknown_caller": {
+              "type": "Response",
+              "kind": "Http",
+              "runAfter": {},
+              "inputs": {
+                "statusCode": 401,
+                "headers": { "Content-Type": "application/json" },
+                "body": {
+                  "error": "unauthorized",
+                  "message": "Missing or wrong x-intake-key."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "outputs": {}
+  },
+  "kind": "Stateful"
+}

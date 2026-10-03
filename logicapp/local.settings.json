@@ -1,0 +1,15 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "APP_KIND": "workflowapp",
+    "AzureFunctionsJobHost__extensionBundle__id": "Microsoft.Azure.Functions.ExtensionBundle.Workflows",
+    "AzureFunctionsJobHost__extensionBundle__version": "[1.*, 2.0.0)",
+    "SYSTEM_A_URL": "http://127.0.0.1:7801",
+    "SYSTEM_B_URL": "http://127.0.0.1:7802",
+    "DEAD_LETTER_URL": "http://127.0.0.1:7803",
+    "INTAKE_SHARED_KEY": "local-dev-key-change-me",
+    "FUNCTIONS_INPROC_NET8_ENABLED": "1"
+  }
+}
