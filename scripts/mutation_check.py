@@ -31,20 +31,20 @@ MUTANTS = [
 
 def stop_func():
     ps = "Get-NetTCPConnection -LocalPort 7071 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }"
-    subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True)
+    subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, timeout=60)
     time.sleep(3)
 
 
 def start_func():
     stop_func()
     env = dict(os.environ, FUNCTIONS_CORE_TOOLS_TELEMETRY_OPTOUT="1")
-    log = open(LOG, "w")
+    log = open(LOG, "w", encoding="utf-8")
     subprocess.Popen([FUNC, "start", "--port", "7071"], cwd=os.path.join(ROOT, "logicapp"), stdout=log, stderr=subprocess.STDOUT, env=env, creationflags=0x08000000)
     for _ in range(40):
         time.sleep(3)
         try:
             urllib.request.urlopen("http://localhost:7071/admin/host/status", timeout=3)
-            if "admission-intake:" in open(LOG, errors="replace").read():
+            if "admission-intake:" in open(LOG, encoding="utf-8", errors="replace").read():
                 return True
         except Exception:
             pass
