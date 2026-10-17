@@ -2,7 +2,7 @@
 
 ![Zap history, then both end-to-end checks passing: a hook into a Worker, and a Jotform form into Airtable](docs/demo.gif)
 
-Two small automations that run end to end and can be checked from outside, built with made-up leads (no customer, no real form, no real data):
+Two Zapier automations with end to end checks: a Catch Hook to a Cloudflare Worker, and a Jotform form to Airtable. Both are built with made-up leads (no customer, no real form, no real data):
 
 1. **Hook to receiver.** A lead POSTed to a **Zapier Catch Hook** is mapped by a Zap and POSTed to a **Cloudflare Worker**, which stores it in KV and serves it back.
 2. **Form to Airtable.** A **Jotform** form's webhook feeds a second Zap, which writes the lead into an **Airtable** table through Airtable's REST API.
