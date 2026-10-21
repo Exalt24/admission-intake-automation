@@ -1,0 +1,7 @@
+hook accepted: success
+PASS  the lead reached the receiver within 90 seconds
+PASS  name was mapped through
+PASS  email was mapped through
+PASS  message was mapped through
+PASS  source is the Zap's fixed value, not the caller's
+PASS  the request came from Zapier

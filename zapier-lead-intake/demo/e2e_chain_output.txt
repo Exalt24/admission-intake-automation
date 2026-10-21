@@ -1,0 +1,6 @@
+form submitted, HTTP 200
+PASS  the lead reached Airtable within 120 seconds
+PASS  name was mapped through
+PASS  email was mapped through
+PASS  message was mapped through
+PASS  source is the Zap's fixed value
