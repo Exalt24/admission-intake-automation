@@ -51,6 +51,10 @@ python scripts/mutation_check.py                               # slow, restarts 
 
 Settings (the two system URLs, the dead-letter URL, the shared key) live in `logicapp/local.settings.json`, the same way an app setting would in Azure.
 
+## Also in this repository: the same intake problem with no-code tools
+
+[`zapier-lead-intake/`](zapier-lead-intake/) is a separate, self-contained lab with its own README, scripts and check. A lead POSTed to a Zapier Catch Hook is mapped by a Zap and stored by a Cloudflare Worker, and a Jotform form feeds a second Zap that writes the lead into Airtable. Both Zaps are checked end to end with a unique test lead. It used to be its own repository and was merged here with its full history, since both answer the same question: how to get one intake into the right systems without re-keying it. Run its scripts from inside that folder. It needs your own Zapier, Jotform, Airtable and Cloudflare accounts, so it is not part of the checks above.
+
 ## Hours given back, the arithmetic
 
 An illustration with stated assumptions, not a measurement: a facility admitting 40 residents a month, about 6 minutes to key one admission into one system, two systems. That is 40 x 6 x 2 = 480 minutes, **8 hours a month** returned to the floor per facility, before counting the time spent chasing a missed entry. Replace the three numbers with the facility's real ones to get its figure.
