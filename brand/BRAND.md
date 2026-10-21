@@ -4,7 +4,7 @@ Decided 2026-10-22 when the Zapier lead-intake lab was merged into this reposito
 
 ## Name
 
-**admission-intake-automation** (kept). It names the core workflow, the one the job post described, and it matches how the rest of the portfolio is named (descriptive, not coined: clio-matter-bridge, enterprise-rag-knowledge-base). Backups if it ever has to change: `intake-gateway`, `two-lane-intake`.
+**admission-intake-automation** (chosen), kept from before the merge. It names the core workflow, the one the job post described, and it matches how the rest of the portfolio is named (descriptive, not coined: clio-matter-bridge, enterprise-rag-knowledge-base). Backups if it ever has to change: `intake-gateway`, `two-lane-intake`.
 
 Why it was not renamed: a rename means a rebrand sweep and new links on the portfolio, the staged LinkedIn text and the profile README, and the new name would only describe the gateway, which is the smaller part.
 
