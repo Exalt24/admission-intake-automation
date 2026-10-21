@@ -1,8 +1,8 @@
 """Creates the Jotform form that feeds the second Zap: a "Lead intake" form (Name, Email, Message), with a webhook pointing at the Zap's Catch Hook URL.
 Idempotent: a form with that title is reused, and a webhook is only added if that URL is not already attached.
 
-    JOTFORM_API_KEY=... python scripts/jotform_setup.py <catch hook url>             # create or reuse the form and attach the webhook
-    JOTFORM_API_KEY=... python scripts/jotform_setup.py --submit <name> <email> <message>   # submit a test lead through the API
+    JOTFORM_API_KEY=... python scripts/contact-lane/jotform_setup.py <catch hook url>             # create or reuse the form and attach the webhook
+    JOTFORM_API_KEY=... python scripts/contact-lane/jotform_setup.py --submit <name> <email> <message>   # submit a test lead through the API
 
 Prints the form id and its public URL. The key comes from the environment or JOTFORM_KEY_FILE; nothing secret is stored in the repo.
 """

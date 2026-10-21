@@ -1,11 +1,13 @@
-// Records the README hero clip: the real Zap history screenshot (docs/zap-history.png), then the real output of scripts/e2e_check.py replayed line by line
-// (captured to demo/e2e_output.txt). Nothing on screen is invented. Usage: node demo/record.cjs <out_dir>
+// Records the contact-lane clip: the real Zap history screenshot (docs/contact-lane/zap-history.png), then the real output of
+// scripts/contact-lane/e2e_check.py replayed line by line (captured to docs/contact-lane/e2e_output.txt). Nothing on screen is invented.
+// Usage: node demo/record_contact_lane.cjs <out_dir>
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('C:/Users/' + process.env.USERNAME + '/AppData/Roaming/npm/node_modules/playwright');
 const out = process.argv[2];
-const png = fs.readFileSync(path.join(__dirname, '..', 'docs', 'zap-history.png')).toString('base64');
-const read = (f) => fs.readFileSync(path.join(__dirname, f), 'utf8').split(/\r?\n/).filter((l) => l.trim());
+const lane = path.join(__dirname, '..', 'docs', 'contact-lane');
+const png = fs.readFileSync(path.join(lane, 'zap-history.png')).toString('base64');
+const read = (f) => fs.readFileSync(path.join(lane, f), 'utf8').split(/\r?\n/).filter((l) => l.trim());
 const lines = [...read('e2e_output.txt'), '--- the chain: Jotform form, Zapier, Airtable ---', ...read('e2e_chain_output.txt')];
 
 const historyHtml = `<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#fff}img{width:100%;display:block}

@@ -7,3 +7,5 @@ logicapp/__queuestorage__/
 logicapp/__azurite*
 logicapp/local.settings.json.bak
 __pycache__/
+chain_key.txt
+cloudflare.env

@@ -1,7 +1,7 @@
 """Creates the Airtable base the Zap writes leads into: a base "Lead intake lab" with one table, Leads (Name, Email, Message, Source). Uses the Metadata API,
 so it needs a personal access token with schema.bases:write and data.records:write. Idempotent: if a base with that name exists it is reused.
 
-    AIRTABLE_TOKEN=... python scripts/airtable_setup.py <workspace id> [<workspace id> ...]    # tries each id until one accepts the base
+    AIRTABLE_TOKEN=... python scripts/contact-lane/airtable_setup.py <workspace id> [<workspace id> ...]    # tries each id until one accepts the base
 
 Prints the base id and table id. Nothing secret is stored in the repo; the token comes from the environment or AIRTABLE_TOKEN_FILE.
 """

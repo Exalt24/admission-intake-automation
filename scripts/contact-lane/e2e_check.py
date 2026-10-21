@@ -2,7 +2,7 @@
 and fail if it does not arrive or arrives with the wrong fields. This proves the path Zapier -> POST -> Cloudflare Worker -> KV, not just that the Zap says "success".
 
     ZAP_HOOK_URL=https://hooks.zapier.com/hooks/catch/<account>/<id>/ \
-    RECEIVER_URL=https://<worker>.workers.dev  CHAIN_KEY=<shared key>  python scripts/e2e_check.py
+    RECEIVER_URL=https://<worker>.workers.dev  CHAIN_KEY=<shared key>  python scripts/contact-lane/e2e_check.py
 
 Nothing secret is stored in the repo: the hook URL and the key come from the environment (or the two files named below).
 """

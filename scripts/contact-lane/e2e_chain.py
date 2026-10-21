@@ -1,7 +1,7 @@
 """End-to-end check for the Jotform to Zapier to Airtable chain: submit a unique lead through the public Jotform form the way a visitor does, then poll the
 Airtable table until exactly that lead appears, and check the mapped fields. Proves the whole path, not just that each Zap says success.
 
-    JOTFORM_FORM_ID=... AIRTABLE_BASE_ID=... AIRTABLE_TOKEN=... python scripts/e2e_chain.py
+    JOTFORM_FORM_ID=... AIRTABLE_BASE_ID=... AIRTABLE_TOKEN=... python scripts/contact-lane/e2e_chain.py
 
 Nothing secret is stored in the repo: the token comes from the environment or AIRTABLE_TOKEN_FILE.
 """
