@@ -1,0 +1,10 @@
+BASELINE: all checks pass
+
+CAUGHT    ssn is no longer treated as a direct identifier: CAUGHT by 2 check(s), e.g. a direct identifier (ssn) is refused with 422   <- 202 {'status': 'accepted', 'track
+CAUGHT    the Idempotency-Key header is dropped from system A: CAUGHT by 1 check(s), e.g. a repeated admission is stored once in A   <- {'name': 'system-a', 'attempts': 2, 'r
+CAUGHT    retries are cut from 3 to 1: CAUGHT by 4 check(s), e.g. two transient failures from A are retried and the call still succeeds   <- 502 {'sta
+CAUGHT    the dead-letter hand-off is pointed at a missing path: CAUGHT by 3 check(s), e.g. the failed admission is parked in the dead-letter store   <- {'name': 'dead-letter',
+CAUGHT    the shared-key check always passes: CAUGHT by 4 check(s), e.g. a wrong key gets 401   <- 202 {'status': 'accepted', 'trackingId': '4d285047-c85a-42
+CAUGHT    a missing careLevel is no longer required: CAUGHT by 2 check(s), e.g. a missing required field gets 400   <- 202 {'status': 'accepted', 'trackingId': '250
+
+6/6 mutants caught

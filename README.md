@@ -2,7 +2,7 @@
 
 ![A real run of the 35 end-to-end checks against the Logic Apps runtime](docs/demo.gif)
 
-Logic Apps workflow that writes one intake call to two systems safely: idempotent, retried, dead-lettered. A care coordinator used to re-key every new admission into two places and chase the confirmation; this is a Logic Apps workflow that does it in seconds, refuses anything that could carry a resident's identity, and tells the caller the truth when a downstream system will not take it.
+Logic Apps workflow that writes one intake call to two systems safely: idempotent, retried, dead-lettered. A care coordinator used to re-key every new admission into two places and chase the confirmation; this is a Logic Apps workflow that does it in seconds on a happy path (not timed in this repo), refuses eight named identifier fields, and tells the caller the truth when a downstream system will not take it.
 
 It is the "copying the same information into two systems" problem from a healthcare-IT job post, built and run on the **real Azure Logic Apps Standard runtime**, locally, against two mock systems. It has not been deployed to Azure and it is not production.
 
@@ -27,10 +27,10 @@ flowchart LR
 | Guarantee | How it is enforced |
 |---|---|
 | Unknown callers are refused | shared key compared to an app setting, 401 before anything else runs |
-| No direct identifiers ever stored | 422 on name, birth date, phone, address or social security number; the facility sends its own opaque `residentRef` |
-| An admission is written once | `Idempotency-Key` on both writes, so a retried call never double-writes |
-| A flaky system is absorbed | fixed retry, 3 attempts, 5 seconds apart |
-| A dead system is not silent | the record and failure detail go to a dead-letter store and the caller gets 502 `held` |
+| No direct identifiers stored | 422 on eight named fields (`residentName`, `patientName`, `name`, `ssn`, `dob`, `dateOfBirth`, `phone`, `address`; exact, case sensitive, top level), and only five whitelisted fields are kept, so an unlisted field is dropped, not refused; the facility sends its own opaque `residentRef` |
+| An admission is written once | `Idempotency-Key` on both writes; the mock systems dedupe on it, and a real system has to honour it |
+| A flaky system is absorbed | fixed retry, 3 retries (up to 4 attempts), 5 seconds apart |
+| A dead system is not silent | the record and failure detail go to a dead-letter store and the caller gets 502 `held` (if the dead-letter write also fails the caller still gets 502 and nothing is parked; not tested) |
 
 ## One front door, two lanes
 
@@ -90,18 +90,18 @@ JOTFORM_FORM_ID=... AIRTABLE_BASE_ID=... AIRTABLE_TOKEN=... python scripts/conta
 
 `gateway/test/lanes.test.mjs` is **12 unit tests** with a fake KV and a fake fetch, and `tests/e2e_gateway.mjs` is **14 checks** that run the Worker in front of the real Logic Apps runtime: an admission accepted and written once to both systems, a wrong key stopped at the edge, an identifier refused and stored nowhere, an admission sent to the contact lane refused, and a dead downstream coming back as 502 held. A planted defect (a new identifier added to the Worker's list only) makes two of the unit tests fail.
 
-`scripts/mutation_check.py` breaks one guarantee at a time in `workflow.json`, restarts the runtime and expects the checks to fail: **6 of 6 caught** (dropping the ssn check, dropping the idempotency header, cutting retries, breaking the dead-letter path, removing the key check, making careLevel optional). The first run caught 5 of 6: a mock that accepted any URL let the broken dead-letter path through, so the mock now rejects wrong paths and the sixth is caught too.
+`scripts/mutation_check.py` breaks one guarantee at a time in `workflow.json`, restarts the runtime and expects the checks to fail: **6 of 6 caught** (last run in `docs/test-runs/mutation_check_last_run.txt`; dropping the ssn check, dropping the idempotency header, cutting retries, breaking the dead-letter path, removing the key check, making careLevel optional). The first run caught 5 of 6: a mock that accepted any URL let the broken dead-letter path through, so the mock now rejects wrong paths and the sixth is caught too.
 
 ## Run it
 
-Needs Node, the .NET 8 SDK and Python 3.
+Needs Node, the .NET 8 SDK and Python 3. Run each of the first three commands in its own terminal and wait for the runtime's 'Host started' line; run the tests from the repository root. The mutation script is Windows only.
 
 ```
 npm install -g azure-functions-core-tools@4 azurite
 python mocks/mock_systems.py                                   # A=7801  B=7802  dead-letter=7803
 azurite --silent --location .azurite                           # the storage the runtime keeps run history in
 cd logicapp && func start --port 7071                          # the Logic Apps runtime
-python tests/e2e_workflow.py                                   # 35 checks, about a minute
+python tests/e2e_workflow.py                                   # 35 checks, last run saved in docs/test-runs/e2e_workflow_last_run.txt
 node tests/e2e_gateway.mjs                                     # 14 checks, the Worker in front of the running workflow
 python scripts/mutation_check.py                               # slow, restarts the runtime per mutant
 node --test gateway/test/lanes.test.mjs                        # 12 unit tests, no runtime needed
@@ -120,5 +120,5 @@ An illustration with stated assumptions, not a measurement: a facility admitting
 - Both Zaps are two steps and have run on made-up leads only. The Webhooks app is a Zapier premium app, so the Zaps keep running after the 14-day trial only on a paid plan, and the Airtable account is also on a trial. The gateway's KV records expire after seven days: the contact lane is a throwaway store, not a CRM.
 - The Zaps are not in this repository because Zapier does not export one as code, so `docs/ZAP.md` is the spec. The Zaps post to Airtable's REST API with a webhook action rather than through Zapier's Airtable app, and the Jotform and Airtable accounts were created by hand because both sign-ups put a human check in front of automation.
 - No front end. A Power Apps screen for the coordinator is the obvious next layer.
-- Not production, and not claimed to be HIPAA compliant. The design follows what a HIPAA review looks at first: least privilege, no stored identifiers, and a record of every hand-off.
+- Not production, and not claimed to be HIPAA compliant. The design follows what a HIPAA review looks at first: one shared key, no stored identifiers, and a record of every hand-off.
 - Partial success is visible, not undone: if A keeps failing and B succeeds, B keeps its record and the dead-letter entry names the side that failed. See `docs/DECISIONS.md` for why.

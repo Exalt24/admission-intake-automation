@@ -1,0 +1,37 @@
+PASS  a valid admission is accepted with 202
+PASS  the response carries a tracking id
+PASS  system A got exactly one record
+PASS  system B got exactly one record
+PASS  both systems got the same tracking id
+PASS  the stored record holds only the agreed fields (no stray input)
+PASS  run history shows the fan-out scope succeeded
+PASS  a wrong key gets 401
+PASS  a missing key gets 401
+PASS  a refused call writes nothing anywhere
+PASS  a missing required field gets 400
+PASS  a 400 writes nothing anywhere
+PASS  a direct identifier (residentName) is refused with 422
+PASS  the refused residentName is not stored in either system
+PASS  a direct identifier (ssn) is refused with 422
+PASS  the refused ssn is not stored in either system
+PASS  a direct identifier (dob) is refused with 422
+PASS  the refused dob is not stored in either system
+PASS  a direct identifier (phone) is refused with 422
+PASS  the refused phone is not stored in either system
+PASS  a direct identifier (address) is refused with 422
+PASS  the refused address is not stored in either system
+PASS  a repeated admission is still accepted
+PASS  a repeated admission is stored once in A
+PASS  a repeated admission is stored once in B
+PASS  two transient failures from A are retried and the call still succeeds
+PASS  A was attempted three times (two failures then success)
+PASS  the retries actually waited (fixed interval, not a tight loop)
+PASS  the record landed in A after the retries
+PASS  a downstream that stays down gets 502 held
+PASS  the failed admission is parked in the dead-letter store
+PASS  the dead-letter entry names the admission and carries the failure detail
+PASS  system B still received its record
+PASS  system A never received a record
+PASS  run history shows the fan-out scope failed and was handled
+
+all checks passed
