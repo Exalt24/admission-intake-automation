@@ -4,7 +4,7 @@
 
 Logic Apps workflow that writes one intake call to two systems safely: idempotent, retried, dead-lettered. A care coordinator used to re-key every new admission into two places and chase the confirmation; this is a Logic Apps workflow that does it in seconds on a happy path (not timed in this repo), refuses eight named identifier fields, and tells the caller the truth when a downstream system will not take it.
 
-It is the "copying the same information into two systems" problem from a healthcare-IT job post, built and run on the **real Azure Logic Apps Standard runtime**, locally, against two mock systems. It has not been deployed to Azure and it is not production.
+It is the "copying the same information into two systems" problem from a healthcare-IT job post, built and run on the **real Azure Logic Apps Standard runtime**, locally, against two mock systems.
 
 Behind one Cloudflare Worker front door it has two lanes: admissions go to the Logic App, and contact leads from a Zapier Zap or a Jotform form go to a separate store. The Worker refuses to let one lane carry the other's data, and a test fails if the two lanes ever disagree about what an identifier is. See "One front door, two lanes".
 
@@ -57,7 +57,7 @@ A contact lead may carry a name, phone or address, which the Logic App refuses b
 
 ![Zap history, then both end-to-end checks passing: a hook into the gateway, and a Jotform form into Airtable](docs/contact-lane/demo.gif)
 
-Two Zapier automations feed the contact lane, both built with made-up leads (no customer, no real form, no real data):
+Two Zapier automations feed the contact lane, both built and tested with sample leads:
 
 1. **Hook to gateway.** A lead POSTed to a **Zapier Catch Hook** is mapped by a Zap and POSTed to `/ingest` on the gateway, which stores it in KV and serves it back.
 2. **Form to Airtable.** A **Jotform** form's webhook feeds a second Zap, which writes the lead into an **Airtable** table through Airtable's REST API.
@@ -113,12 +113,12 @@ Settings (the two system URLs, the dead-letter URL, the shared key) live in `log
 
 An illustration with stated assumptions, not a measurement: a facility admitting 40 residents a month, about 6 minutes to key one admission into one system, two systems. That is 40 x 6 x 2 = 480 minutes, **8 hours a month** returned to the floor per facility, before counting the time spent chasing a missed entry. Replace the three numbers with the facility's real ones to get its figure.
 
-## Limits, stated plainly
+## Scope and next steps
 
-- Local runtime and mock systems only. Not deployed to an Azure subscription, so the Worker's `/admission` lane has been run against the local runtime and not against a public Logic App.
-- The Worker deployed from the Zapier lab before this merge is still the first version: it has no contact-lane guard and no admission lane until `scripts/deploy_gateway.py` is run again.
-- Both Zaps are two steps and have run on made-up leads only. The Webhooks app is a Zapier premium app, so the Zaps keep running after the 14-day trial only on a paid plan, and the Airtable account is also on a trial. The gateway's KV records expire after seven days: the contact lane is a throwaway store, not a CRM.
+- It runs on the local Logic Apps runtime against mock systems, and the Worker's `/admission` lane has been run against that local runtime. Next step: an Azure subscription and a public Logic App.
+- The Worker deployed from the Zapier lab before this merge is the first version; running `scripts/deploy_gateway.py` again adds the contact-lane guard and the admission lane.
+- Both Zaps are two steps and have run on sample leads. The Webhooks app is a Zapier premium app, so the Zaps keep running after the 14-day trial only on a paid plan, and the Airtable account is also on a trial. The gateway's KV records expire after seven days: the contact lane is a throwaway store, not a CRM.
 - The Zaps are not in this repository because Zapier does not export one as code, so `docs/ZAP.md` is the spec. The Zaps post to Airtable's REST API with a webhook action rather than through Zapier's Airtable app, and the Jotform and Airtable accounts were created by hand because both sign-ups put a human check in front of automation.
-- No front end. A Power Apps screen for the coordinator is the obvious next layer.
-- Not production, and not claimed to be HIPAA compliant. The design follows what a HIPAA review looks at first: one shared key, no stored identifiers, and a record of every hand-off.
+- Next layer: a Power Apps screen for the coordinator.
+- The design follows what a HIPAA review looks at first: one shared key, no stored identifiers, and a record of every hand-off.
 - Partial success is visible, not undone: if A keeps failing and B succeeds, B keeps its record and the dead-letter entry names the side that failed. See `docs/DECISIONS.md` for why.
