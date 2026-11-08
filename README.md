@@ -2,11 +2,13 @@
 
 ![A real run of the 35 end-to-end checks against the Logic Apps runtime](docs/demo.gif)
 
-Logic Apps workflow that writes one intake call to two systems safely: idempotent, retried, dead-lettered. A care coordinator used to re-key every new admission into two places and chase the confirmation; this is a Logic Apps workflow that does it in seconds on a happy path (not timed in this repo), refuses eight named identifier fields, and tells the caller the truth when a downstream system will not take it.
+A Logic Apps workflow that writes one intake call to two systems safely: idempotent, retried and dead-lettered.
 
-It is the "copying the same information into two systems" problem from a healthcare-IT job post, built and run on the **real Azure Logic Apps Standard runtime**, locally, against two mock systems.
+A care coordinator used to re-key every new admission into two places and chase the confirmation. This workflow does it in seconds on a happy path (not timed in this repo). It refuses eight named identifier fields. It also tells the caller the truth when a downstream system will not take the record.
 
-Behind one Cloudflare Worker front door it has two lanes: admissions go to the Logic App, and contact leads from a Zapier Zap or a Jotform form go to a separate store. The Worker refuses to let one lane carry the other's data, and a test fails if the two lanes ever disagree about what an identifier is. See "One front door, two lanes".
+It is the "copying the same information into two systems" problem from a healthcare-IT job post. It was built and run locally. It uses the **real Azure Logic Apps Standard runtime**, against two mock systems.
+
+A Cloudflare Worker sits in front as one door with two lanes. Admissions go to the Logic App. Contact leads from a Zapier Zap or a Jotform form go to a separate store. The Worker refuses to let one lane carry the other's data. A test fails if the two lanes ever disagree about what an identifier is. See "One front door, two lanes".
 
 ## What it does
 
@@ -51,7 +53,7 @@ flowchart LR
 | The Logic App's own answer (202, 400, 401, 422, 502) reaches the caller unchanged | `admission()` in `gateway/worker.js` |
 | The Worker and the Logic App agree on what an identifier is | `gateway/test/lanes.test.mjs` reads `workflow.json` and fails if either list changes alone |
 
-A contact lead may carry a name, phone or address, which the Logic App refuses by design, so those three are listed as the deliberate overlap and the lanes are told apart by the admission fields and the clinical identifiers.
+A contact lead may carry a name, phone or address. The Logic App refuses those by design. Those three are listed as the deliberate overlap. The lanes are told apart by the admission fields and the clinical identifiers.
 
 ## The contact lane: Zapier, Jotform and Airtable
 
@@ -71,9 +73,9 @@ Two Zapier automations feed the contact lane, both built and tested with sample 
 | `scripts/contact-lane/e2e_chain.py` | Submits a unique lead through the public Jotform form, polls Airtable for exactly that lead and checks five things (arrived within 120 s, name, email and message mapped, the Zap's fixed `source`) |
 | `docs/ZAP.md` | The written spec of both Zaps, since a Zap is built in the editor and cannot be committed as code |
 
-Measured 2026-10-04, when this lane was its own repository (merged here with its full history on 2026-10-22). Both Zaps were built in Zapier's editor, tested with the editor's own test step, published and then fired from outside: `e2e_check.py` passed 6 of 6 and `e2e_chain.py` 5 of 5, and Zap history lists the runs as Successful (the first frame of the clip above). The captured output is in `docs/contact-lane/`.
+Measured 2026-10-04, when this lane was its own repository (merged here with its full history on 2026-10-22). Both Zaps were built in Zapier's editor, tested with the editor's own test step and published. They were then fired from outside. `e2e_check.py` passed 6 of 6 and `e2e_chain.py` 5 of 5. Zap history lists the runs as Successful (the first frame of the clip above). The captured output is in `docs/contact-lane/`.
 
-To run it you need your own Zapier account (the Webhooks app needs a paid plan or the trial), a Cloudflare account, a Jotform account, an Airtable account and Python 3:
+To run it you need your own Zapier, Cloudflare, Jotform and Airtable accounts, plus Python 3. The Zapier Webhooks app needs a paid plan or the trial.
 
 ```
 python scripts/deploy_gateway.py                                    # prints the Worker URL
@@ -86,15 +88,21 @@ JOTFORM_FORM_ID=... AIRTABLE_BASE_ID=... AIRTABLE_TOKEN=... python scripts/conta
 
 ## Proof
 
-`tests/e2e_workflow.py` drives the running workflow and checks the two mock systems and the runtime's own run history: **35 checks**, covering the happy path, both kinds of bad caller, five refused identifier fields, idempotency, a transient failure absorbed by retries (with the wait measured), and a permanent failure parked in the dead-letter store.
+`tests/e2e_workflow.py` drives the running workflow and checks the two mock systems and the runtime's own run history. It runs **35 checks**. They cover the happy path, both kinds of bad caller, five refused identifier fields and idempotency. They also cover a transient failure absorbed by retries, with the wait measured. A permanent failure is parked in the dead-letter store.
 
-`gateway/test/lanes.test.mjs` is **12 unit tests** with a fake KV and a fake fetch, and `tests/e2e_gateway.mjs` is **14 checks** that run the Worker in front of the real Logic Apps runtime: an admission accepted and written once to both systems, a wrong key stopped at the edge, an identifier refused and stored nowhere, an admission sent to the contact lane refused, and a dead downstream coming back as 502 held. A planted defect (a new identifier added to the Worker's list only) makes two of the unit tests fail.
+`gateway/test/lanes.test.mjs` is **12 unit tests** with a fake KV and a fake fetch.
 
-`scripts/mutation_check.py` breaks one guarantee at a time in `workflow.json`, restarts the runtime and expects the checks to fail: **6 of 6 caught** (last run in `docs/test-runs/mutation_check_last_run.txt`; dropping the ssn check, dropping the idempotency header, cutting retries, breaking the dead-letter path, removing the key check, making careLevel optional). The first run caught 5 of 6: a mock that accepted any URL let the broken dead-letter path through, so the mock now rejects wrong paths and the sixth is caught too.
+`tests/e2e_gateway.mjs` is **14 checks** that run the Worker in front of the real Logic Apps runtime. They cover an admission accepted and written once to both systems. They cover a wrong key stopped at the edge and an identifier refused and stored nowhere. They also cover an admission sent to the contact lane being refused, and a dead downstream coming back as 502 held.
+
+A planted defect makes two of the unit tests fail. The defect is a new identifier added to the Worker's list only.
+
+`scripts/mutation_check.py` breaks one guarantee at a time in `workflow.json`, restarts the runtime and expects the checks to fail. It caught **6 of 6** (last run in `docs/test-runs/mutation_check_last_run.txt`). The six are dropping the ssn check, dropping the idempotency header and cutting retries. The others are breaking the dead-letter path, removing the key check and making careLevel optional.
+
+The first run caught 5 of 6. A mock that accepted any URL let the broken dead-letter path through. The mock now rejects wrong paths, so the sixth is caught too.
 
 ## Run it
 
-Needs Node, the .NET 8 SDK and Python 3. Run each of the first three commands in its own terminal and wait for the runtime's 'Host started' line; run the tests from the repository root. The mutation script is Windows only.
+Needs Node, the .NET 8 SDK and Python 3. Run each of the first three commands in its own terminal. Wait for the runtime's 'Host started' line. Run the tests from the repository root. The mutation script is Windows only.
 
 ```
 npm install -g azure-functions-core-tools@4 azurite
@@ -107,18 +115,18 @@ python scripts/mutation_check.py                               # slow, restarts 
 node --test gateway/test/lanes.test.mjs                        # 12 unit tests, no runtime needed
 ```
 
-Settings (the two system URLs, the dead-letter URL, the shared key) live in `logicapp/local.settings.json`, the same way an app setting would in Azure.
+Settings live in `logicapp/local.settings.json`, the same way an app setting would in Azure. They are the two system URLs, the dead-letter URL and the shared key.
 
 ## Hours given back, the arithmetic
 
-An illustration with stated assumptions, not a measurement: a facility admitting 40 residents a month, about 6 minutes to key one admission into one system, two systems. That is 40 x 6 x 2 = 480 minutes, **8 hours a month** returned to the floor per facility, before counting the time spent chasing a missed entry. Replace the three numbers with the facility's real ones to get its figure.
+An illustration with stated assumptions, not a measurement. Take a facility admitting 40 residents a month. Keying one admission into one system takes about 6 minutes, and there are two systems. That is 40 x 6 x 2 = 480 minutes. It returns **8 hours a month** to the floor per facility. It does not count the time spent chasing a missed entry. Replace the three numbers with the facility's real ones to get its figure.
 
 ## Scope and next steps
 
-- It runs on the local Logic Apps runtime against mock systems, and the Worker's `/admission` lane has been run against that local runtime. Next step: an Azure subscription and a public Logic App.
-- The Worker deployed from the Zapier lab before this merge is the first version; running `scripts/deploy_gateway.py` again adds the contact-lane guard and the admission lane.
-- Both Zaps are two steps and have run on sample leads. The Webhooks app is a Zapier premium app, so the Zaps keep running after the 14-day trial only on a paid plan, and the Airtable account is also on a trial. The gateway's KV records expire after seven days: the contact lane is a throwaway store, not a CRM.
-- The Zaps are not in this repository because Zapier does not export one as code, so `docs/ZAP.md` is the spec. The Zaps post to Airtable's REST API with a webhook action rather than through Zapier's Airtable app, and the Jotform and Airtable accounts were created by hand because both sign-ups put a human check in front of automation.
+- It runs on the local Logic Apps runtime against mock systems. The Worker's `/admission` lane has been run against that local runtime. Next step: an Azure subscription and a public Logic App.
+- The Worker deployed from the Zapier lab before this merge is the first version. Running `scripts/deploy_gateway.py` again adds the contact-lane guard and the admission lane.
+- Both Zaps are two steps and have run on sample leads. The Webhooks app is a Zapier premium app. The Zaps keep running after the 14-day trial only on a paid plan. The Airtable account is also on a trial. The gateway's KV records expire after seven days. The contact lane is a throwaway store, not a CRM.
+- The Zaps are not in this repository because Zapier does not export one as code. `docs/ZAP.md` is the spec. The Zaps post to Airtable's REST API with a webhook action, not through Zapier's Airtable app. The Jotform and Airtable accounts were created by hand. Both sign-ups put a human check in front of automation.
 - Next layer: a Power Apps screen for the coordinator.
-- The design follows what a HIPAA review looks at first: one shared key, no stored identifiers, and a record of every hand-off.
-- Partial success is visible, not undone: if A keeps failing and B succeeds, B keeps its record and the dead-letter entry names the side that failed. See `docs/DECISIONS.md` for why.
+- The design follows what a HIPAA review looks at first. That is one shared key, no stored identifiers and a record of every hand-off.
+- Partial success is visible, not undone. If A keeps failing and B succeeds, B keeps its record. The dead-letter entry names the side that failed. See `docs/DECISIONS.md` for why.
